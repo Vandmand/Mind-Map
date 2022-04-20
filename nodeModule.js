@@ -2,18 +2,18 @@ class NodeModule {
     constructor() {
         // Node class 
         this.Node = class Node {
-            constructor(x, y, size = 10, magneticForce = 1) {
+            constructor(x, y, size = 10, magneticForce = 1, freeze) {
                 this.pos = createVector(x, y);
                 this.size = size;
-                this.forceMag = 0.3 * magneticForce;
+                this.forceMag = 1 * magneticForce;
                 this.force = createVector(0, 0);
-                this.freeze = false;
+                this.freeze = freeze;
             }
         }
 
         // Link class
         this.Link = class Link {
-            constructor(nodeA,nodeB) {
+            constructor(nodeA, nodeB) {
                 this.nodeA = nodeA
                 this.nodeB = nodeB
             }
@@ -27,20 +27,27 @@ class NodeModule {
 
         this.linkForce = 0.00006
     }
-    spawnNode(x, y, size, magForce) {
-        let temp = new this.Node(x, y, size, magForce);
+
+    // Initial scripts
+    start() {
+        rd.createKey('node', 2)
+        rd.createKey('links', 1)
+        this.spawnNode(width/2,height/2,100,3,true)
+    }
+
+    // Make a new node
+    spawnNode(x, y, size, magForce, freeze = false) {
+        let temp = new this.Node(x, y, size, magForce, freeze);
         rd.add('node', () => circle(temp.pos.x, temp.pos.y, temp.size));
         this.nodes.push(temp);
     }
     moveNodes() {
         this.nodes.forEach(node => {
-            if (!node.force.equals(0, 0)) {
-                if(node.force.mag() <= 5) {
-                    node.pos.add(node.force);   
-                } else {
-                    node.force.setMag(5)
+            if(!node.freeze) {
+                if (!node.force.equals(0, 0)) {
+                    node.pos.add(node.force);
+                    node.force.mag() >= 0.5 ? node.force.sub(node.force) : node.force.mult(0.995);
                 }
-                node.force.mag() <= 0.05 ? node.force.sub(node.force) : node.force.mult(0.965);
             }
         })
     }
@@ -55,33 +62,39 @@ class NodeModule {
             return dist(x, y, closest.pos.x, closest.pos.y) < closest.size / 2 ? true : false;
         }
     }
-    link(nodeA,nodeB) {
-        this.links.push(new this.Link(nodeA,nodeB))
+    link(nodeA, nodeB) {
+        this.links.push(new this.Link(nodeA, nodeB))
+        rd.add('links', () => line(nodeA.pos.x, nodeA.pos.y, nodeB.pos.x, nodeB.pos.y))
     }
     calcForces() {
+        // Calc link forces
         this.links.forEach(link => {
-            let a = link.nodeA;
-            let b = link.nodeB;
-            let vecDist = dist(a.pos.x,a.pos.y,b.pos.x,b.pos.x);
-            if( vecDist > 150) {
-                if(a.force.mag() < 5 && !a.freeze) {
-                    a.force = b.pos.copy().sub(a.pos).mult(this.linkForce*vecDist);
-                }
-                if(b.force.mag() < 5 && !b.freeze) {
-                    b.force = a.pos.copy().sub(b.pos).mult(this.linkForce*vecDist);
-                }
+            const a = link.nodeA;
+            const b = link.nodeB;
+            let vecDist = dist(a.pos.x, a.pos.y, b.pos.x, b.pos.x);
+            if (vecDist > 150) {
+                a.force = b.pos.copy().sub(a.pos).mult(this.linkForce * vecDist);
+                b.force = a.pos.copy().sub(b.pos).mult(this.linkForce * vecDist);
             }
         })
+
+        // Calc Mag forces
         for (let i = 0; i < this.nodes.length; i++) {
             const a = this.nodes[i];
-            const b = this.nodes[i+1];
-            if(b) {
-                let vecDist = dist(a.pos.x,a.pos.y,b.pos.x,b.pos.x);
-                if(vecDist < 100) {
-                    a.force = a.pos.copy().sub(b.pos).mult(a.forceMag/vecDist);
-                    b.force = b.pos.copy().sub(a.pos).mult(b.forceMag/vecDist);
+            const b = this.nodes[i + 1];
+            if (b) {
+                let vecDist = dist(a.pos.x, a.pos.y, b.pos.x, b.pos.y);
+                if (vecDist < 80*a.forceMag) {
+                    a.force = a.pos.copy().sub(b.pos).mult(a.forceMag / vecDist);
+                    b.force = b.pos.copy().sub(a.pos).mult(b.forceMag / vecDist);
                 }
-            }
+            } 
         }
     }
+}
+
+function createNodeModule() {
+    let temp = new NodeModule()
+    temp.start()
+    return temp
 }

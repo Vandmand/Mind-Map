@@ -1,5 +1,5 @@
 // ===========================================================
-// = Renderer Module = Elias Kulmbak = v 0.2.0
+// = Renderer Module = Elias Kulmbak = v 0.2.2
 // ===========================================================
 /*
     This module collects all "renders" from p5.
@@ -11,6 +11,8 @@ class Renderer {
     constructor() {
         // The variable that actually holds the rendering:
         this.renderList = new Map();
+
+        // Self explanitory
         this.defaultPriority = 0;
 
         //Custom error message
@@ -47,29 +49,55 @@ class Renderer {
         this.renderList.clear();
     }
     // Returns the specefied key if such key exist. Else returns false
-    get(key) {
-        return this.renderList.has(key) ? this.renderList.get(key) : undefined;
+    get(key, path = 'ROOT') {
+
+        path = this.valPath(path);
+
+        return path.has(key) ? path.get(key) : undefined
     }
+
+    // Validate any input path
+    valPath(path) {
+        let returnPath;
+
+        if (path.toUpperCase() == 'ROOT') {
+            returnPath = this.renderList
+        } else {
+            let currNode = returnPath
+
+            const pathArr = path.split('.')
+            pathArr.forEach(node => {
+                try {
+                    currNode = currNode.get(node)
+                } catch (error) {
+                    throw new this.error('path does not exist');
+                }
+            })
+
+            returnPath = currNode;
+        }
+
+        if(returnPath.constructor == Map) {
+            return returnPath;
+        } else {
+            throw new this.error('path does not exist, you fucking baffoon')
+        }
+    }
+
     // Add function(s) to renderKey
     // Param drawFuntion takes both array or function
     // If a non-existant key is supplied, creates key, then runs function
     add(key, drawFunction) {
+        // Key exists?
         if (this.get(key)) {
             switch (drawFunction.constructor) {
                 case Function:
-                    this.renderList.get(key).functions.push(drawFunction);
+                    this.renderList.get(key).data.push(drawFunction);
                     break;
                 case Array:
                     drawFunction.forEach(i => {
                         this.add(key, i);
                     });
-                    break;
-                case Object:
-                    if (drawFunction.toUpperCase() == 'FOLDER') {
-
-                    } else {
-                        throw new this.error('Invalid datatype');
-                    }
                     break;
                 default:
                     throw new this.error('Invalid datatype');
@@ -88,7 +116,7 @@ class Renderer {
                 let oldMap = [...this.renderList];
                 let left = oldMap.filter(entry => { if (entry[1].priority <= priority) { return true } });
                 let right = oldMap.filter(entry => { if (entry[1].priority > priority) { return true } });
-                this.renderList = new Map(left.concat([[key, { priority: priority, functions: [] }]], right));
+                this.renderList = new Map(left.concat([[key, { priority: priority, data: [] }]], right));
             }
         } else {
             throw new this.error('No key specefied');
@@ -96,16 +124,8 @@ class Renderer {
     }
 
     //Unused code block. Ill come back to. Hopefully
-    createFolder(key, path, priority = this.defaultPriority) {
-        if (this.get(path)) {
-            let oldMap = [...this.renderList];
-            let left = oldMap.filter(entry => { if (entry[1].priority <= priority) { return true } });
-            let right = oldMap.filter(entry => { if (entry[1].priority > priority) { return true } });
-            this.renderList = new Map(left.concat([[key, { priority: priority, folder: [] }]], right));
-
-        } else {
-            throw new this.error('Invalid key')
-        }
+    createNode(path, key, priority = this.defaultPriority) {
+        this.get(path).set(key, { priority: priority, folder: new Map() })
     }
     // Remove renderKey
     removeKey(key) {
@@ -122,13 +142,13 @@ class Renderer {
     // Render all keys
     render(entry = this.renderList) {
         entry.forEach(renderGroup => {
-            if (renderGroup.functions) {
+            if (renderGroup.data) {
                 push();
-                renderGroup.functions.forEach(drawFunction => {
+                renderGroup.data.forEach(drawFunction => {
                     drawFunction();
                 })
-                pop();   
-            } else if (renderGroup.folder){
+                pop();
+            } else if (renderGroup.folder) {
                 this.render(renderGroup.folder)
             }
         });

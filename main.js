@@ -7,38 +7,43 @@ function setup() {
 
   // Modules with p5
   rd = new Renderer();
-  nm = new NodeModule();
+  // nm = createNodeModule();
 
   // Miscs
   misc();
 }
 
 function draw() {
-  nm.moveNodes();
-  nm.calcForces();
+  // nm.moveNodes();
+  // nm.calcForces();
   rd.render();
 }
 
 function misc() {
   rd.add('background', () => background(220));
-  nm.spawnNode(100,100,70)
-  nm.spawnNode(400,400,70)
-  nm.link(nm.nodes[0],nm.nodes[1])
 }
 
+/*
 let draggedNode
 function mouseDragged() {
   if (draggedNode) {
     draggedNode.pos.x = mouseX;
     draggedNode.pos.y = mouseY;
-  } else if(nm.collided()) {
-      draggedNode = nm.getNode();
-      draggedNode.freeze = true;
-      yeet("Node frozen: " + draggedNode)
+  } else if (nm.collided()) {
+    draggedNode = nm.getNode();
+    draggedNode.freeze = true;
+    yeet("Node frozen: ")
+    yeet(draggedNode)
+  } else {
+    nm.spawnNode(mouseX,mouseY,70,1,true)
+    draggedNode = nm.getNode();
   };
 }
 
 function mouseReleased() {
-  draggedNode.freeze = false;
-  draggedNode = undefined;
+  if (draggedNode) {
+    draggedNode.freeze = false;
+    draggedNode = undefined;
+  }
 }
+*/
